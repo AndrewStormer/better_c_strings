@@ -13,13 +13,14 @@ typedef struct bstr {
 
 Bstr bstr_create(char * s);
 void bstr_destroy(Bstr b);
+void bstr_destroy_tokens(Bstr * tokens, int token_count);
 Bstr bstr_substr(char * s, char * e);
 void bstr_print(Bstr b);
 void bstr_print_tokens(Bstr * tokens, int token_count);
 int bstr_strlen(Bstr b);
 //static Bstr bstr_resize(Bstr b, int new_len);
 void bstr_append_str(Bstr * b, char * s);
-void bstr_append_bstr(Bstr * b, Bstr s);
+void bstr_append(Bstr * b, Bstr s);
 void bstr_print(Bstr b);
 //static int bstr_count_tokens(Bstr b, char delim);
 //static char * bstr_next_token(Bstr b, char * h, char delim);
@@ -34,6 +35,7 @@ void bstr_clean_tokens(Bstr ** tokens, int token_count);
 int bstr_count_char(Bstr b, char c);
 void bstr_reverse(Bstr * b);
 void bstr_reverse_tokens(Bstr ** tokens, int token_count);
+void bstr_shorten(Bstr * b, int new_len);
 
 
 #endif //BETTER_STRINGS_H_
@@ -57,7 +59,7 @@ Bstr bstr_create(char * s) {
   b.h = malloc(sizeof(char)*len);
   b.nt = b.h + len;
   for (int i = 0; i < len; ++i) {
-   b.h[i] = s[i];
+    b.h[i] = s[i];
   }
   return b;
 }
@@ -67,8 +69,15 @@ inline void bstr_destroy(Bstr b) {
   free(b.h);
 }
 
+
+inline void bstr_destroy_tokens(Bstr * tokens, int token_count) {
+  for (int i = 0; i < token_count; ++i)
+    bstr_destroy(tokens[i]);
+}
+
+
 Bstr bstr_substr(char * s, char * e) {
-  //assert(e >= s);
+  assert(e >= s);
   Bstr b;
   b.h = malloc(sizeof(char)*(e-s)+1);
   b.nt = b.h;
@@ -143,8 +152,7 @@ void bstr_append_str(Bstr * b, char * s) {
 }
 
 
-
-void bstr_append_bstr(Bstr * b, Bstr s) {
+void bstr_append(Bstr * b, Bstr s) {
   int len = bstr_strlen(*b), new_len = bstr_strlen(s) + len-1;
   *b = bstr_resize(*b, new_len);
   char * c1 = (b->h + (len-1)), * c2 = s.h;
@@ -179,6 +187,7 @@ static char * bstr_next_delim(Bstr b, char * h, char delim) {
   return h;
 }
 
+
 static char * bstr_next_non_delim(Bstr b, char * h, char delim) {
   while (*h == delim && h != b.nt) {
     ++h;
@@ -190,6 +199,7 @@ static char * bstr_next_non_delim(Bstr b, char * h, char delim) {
 Bstr * bstr_split(Bstr b, char delim, int * token_count, int keep_delim) {
   *token_count = bstr_count_tokens(b, delim);
   Bstr * tokens = malloc(sizeof(Bstr)**token_count);
+  assert(tokens != NULL);
   char * c = b.h, * d;
   for (int i = 0; i < *token_count; ++i) {
     d = bstr_next_delim(b, c, delim);
@@ -209,9 +219,9 @@ Bstr bstr_join(Bstr * tokens, int token_count) {
   int joined_len = 0;
   for (int i = 0; i < token_count; ++i)
     joined_len += bstr_strlen(tokens[i]);
-  printf("%d\n", joined_len);
   Bstr b;
   b.h = malloc(sizeof(char)*joined_len);
+  assert(b.h != NULL);
   char * h = b.h;
   for (int i = 0; i < token_count; ++i) {
     char * c = tokens[i].h;
@@ -300,5 +310,14 @@ void bstr_reverse_tokens(Bstr ** tokens, int token_count) {
   }
 }
 
+
+void bstr_shorten(Bstr * b, int new_len) {
+  int len = bstr_strlen(*b);
+  assert(new_len < len);
+  Bstr nb = bstr_substr(b->h,(b->h + new_len));
+  Bstr * temp = b;
+  *b = nb;
+  bstr_destroy(*temp);
+}
 
 #endif
