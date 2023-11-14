@@ -32,10 +32,11 @@ void bstr_rclean(Bstr * b);
 void bstr_rclean_tokens(Bstr ** tokens, int token_count);
 void bstr_clean(Bstr * b);
 void bstr_clean_tokens(Bstr ** tokens, int token_count);
+void bstr_full_clean(Bstr * b);
 int bstr_count_char(Bstr b, char c);
 void bstr_reverse(Bstr * b);
 void bstr_reverse_tokens(Bstr ** tokens, int token_count);
-void bstr_shorten(Bstr * b, int new_len);
+char * bstr_lmatch_str(Bstr b, Bstr str);
 
 
 #endif //BETTER_STRINGS_H_
@@ -209,7 +210,6 @@ Bstr * bstr_split(Bstr b, char delim, int * token_count, int keep_delim) {
     }
     tokens[i] = bstr_substr(c, d - (1 - keep_delim));
     c = bstr_next_non_delim(b, d, delim);
-    printf("%c\n", *c);
   }
   return tokens;
 }
@@ -281,6 +281,15 @@ void bstr_clean_tokens(Bstr ** tokens, int token_count) {
 }
 
 
+void bstr_full_clean(Bstr * b) {
+  int token_count = 0;
+  Bstr * tokens = bstr_split(*b,  ' ', &token_count, 0);
+  bstr_clean_tokens(&tokens, token_count);
+  *b = bstr_join(tokens, token_count);
+  bstr_destroy_tokens(tokens, token_count);
+}
+
+
 int bstr_count_char(Bstr b, char c) {
   int count = 0;
   for (char * p = b.h; p <= b.nt; ++p) {
@@ -311,13 +320,17 @@ void bstr_reverse_tokens(Bstr ** tokens, int token_count) {
 }
 
 
-void bstr_shorten(Bstr * b, int new_len) {
-  int len = bstr_strlen(*b);
-  assert(new_len < len);
-  Bstr nb = bstr_substr(b->h,(b->h + new_len));
-  Bstr * temp = b;
-  *b = nb;
-  bstr_destroy(*temp);
+char * bstr_lmatch_str(Bstr b, Bstr str) {
+  char * c = b.h, * s = str.h;
+
+  while (c <= b.nt) {
+    if (*s == *c) {
+      if (s == str.nt)
+	return c - (s-str.nt);
+      ++s;
+    }
+    ++c;
+  }
 }
 
 #endif
