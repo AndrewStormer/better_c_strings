@@ -12,6 +12,7 @@ typedef struct bstr {
 } Bstr;
 
 Bstr bstr_create(char * s);
+char * bstr_unwrap(Bstr b);
 void bstr_destroy(Bstr b);
 void bstr_destroy_tokens(Bstr * tokens, int token_count);
 Bstr bstr_substr(char * s, char * e);
@@ -63,6 +64,25 @@ Bstr bstr_create(char * s) {
     b.h[i] = s[i];
   }
   return b;
+}
+
+
+//TODO: implement a way to declare in static space so we do not have to free
+//Problem: doing char str[bstr_strlen(b)+1] creates str in the stack, which does not persist after the function is returned from, and so we to return a pointer to that stack spac which breaks.
+//*** MUST FREE STRING PASSED BACK FROM FUNCTION
+char * bstr_unwrap(Bstr b) {
+  char * str = malloc(sizeof(char)*bstr_strlen(b) + 1);
+  char * c = b.h;
+  char * s = str;
+
+  while (c <= b.nt) {
+    *s = *c;
+    ++s;
+    ++c;
+  }
+  *s = '\0';
+  bstr_destroy(b);
+  return &str[0];
 }
 
 
@@ -118,24 +138,22 @@ inline int bstr_strlen(Bstr b) {
 
 static Bstr bstr_resize(Bstr b, int new_len) {
   if (b.h != NULL) {
-    char * s;
-    if (!(s = malloc(sizeof(char)*new_len)))
-      printf("Malloc failed!\n");
-    else {
-      char * c = s;
-      int i = 0;
-      while (i <= b.nt - b.h + 1) {
-	*c = b.h[i];
-	++i;
-	++c;
-      }
-      free(b.h);
-      b.h = s;
-      b.nt = b.h + new_len-1;
-      //*b.nt = '\0';
+    char * s = malloc(sizeof(char)*new_len);
+    assert(s != NULL);
+    char * c = s;
+    int i = 0;
+    while (i <= b.nt - b.h + 1) {
+      *c = b.h[i];
+      ++i;
+      ++c;
     }
-  } else
+    free(b.h);
+    b.h = s;
+    b.nt = b.h + new_len-1;
+  } else {
     b.h = malloc(sizeof(char)*new_len);
+    assert(b.h != NULL);
+  }
   return b;
 }
 
@@ -241,7 +259,10 @@ void bstr_lclean(Bstr * b) {
   while (*c == ' ') {
     ++c;
   }
-  *b = bstr_substr(c, b->nt);
+  Bstr * temp = b;
+  Bstr temp2 = bstr_substr(c, b->nt);
+  b = &temp2;
+  bstr_destroy(*b);
 }
 
 
@@ -257,7 +278,11 @@ void bstr_rclean(Bstr * b) {
   while (*c == ' ') {
     --c;
   }
-  *b = bstr_substr(b->h, c);
+
+  Bstr * temp = b;
+  Bstr temp2 = bstr_substr(b->h, c);
+  b = &temp2;
+  bstr_destroy(*b);
 }
 
 
@@ -320,6 +345,7 @@ void bstr_reverse_tokens(Bstr ** tokens, int token_count) {
 }
 
 
+//TODO: rmatch_str, edit distance
 char * bstr_lmatch_str(Bstr b, Bstr str) {
   char * c = b.h, * s = str.h;
 
@@ -331,6 +357,8 @@ char * bstr_lmatch_str(Bstr b, Bstr str) {
     }
     ++c;
   }
+  return NULL;
 }
 
 #endif
+
