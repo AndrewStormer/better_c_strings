@@ -6,3 +6,13 @@ Strings can easily be wrapped in a Bstr by using the bstr_create(string) functio
 #define BETTER_STRINGS_IMPLEMENTATION_
 
 #include "better_strings.h"
+
+Bstr your_bstr = bstr_wrap("Literally any string you could imagine! Your limit is your memory space!");
+
+//do some operations e.g) split, clean, join, match, reverse, etc.
+
+char * str = bstr_unwrap(your_bstr);
+
+//do whatever with your new modified string!
+
+free(str);
