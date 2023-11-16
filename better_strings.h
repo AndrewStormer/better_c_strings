@@ -11,7 +11,7 @@ typedef struct bstr {
   char * h, * nt; //head and null terminator (not actually saving space for '\0', we know we are at the end if a pointer points to Bstr.nt.
 } Bstr;
 
-Bstr bstr_create(char * s);
+Bstr bstr_wrap(char * s);
 char * bstr_unwrap(Bstr b);
 void bstr_destroy(Bstr b);
 void bstr_destroy_tokens(Bstr * tokens, int token_count);
@@ -25,7 +25,7 @@ void bstr_append(Bstr * b, Bstr s);
 void bstr_print(Bstr b);
 //static int bstr_count_tokens(Bstr b, char delim);
 //static char * bstr_next_token(Bstr b, char * h, char delim);
-Bstr * bstr_split(Bstr b, char delim, int * token_count, int keep_delim); //token_count is passed by ref, when keep_delim is 0 delim is automatically changed to newline
+Bstr * bstr_split(Bstr b, char delim, int * token_count, int keep_delim);
 Bstr bstr_join(Bstr * b, int token_count);
 void bstr_lclean(Bstr * b);
 void bstr_lclean_tokens(Bstr ** tokens, int token_count);
@@ -55,7 +55,7 @@ static int str_strlen(char * s) {
 
 
 
-Bstr bstr_create(char * s) {
+Bstr bstr_wrap(char * s) {
   Bstr b;
   int len = str_strlen(s)-1;
   b.h = malloc(sizeof(char)*len);
@@ -215,10 +215,12 @@ static char * bstr_next_non_delim(Bstr b, char * h, char delim) {
 }
 
 
+//token_count is passed by reference, when keep_delim is 1 we keep the last found delim (if multiple delims, it keeps all of them)
 Bstr * bstr_split(Bstr b, char delim, int * token_count, int keep_delim) {
   *token_count = bstr_count_tokens(b, delim);
   Bstr * tokens = malloc(sizeof(Bstr)**token_count);
   assert(tokens != NULL);
+  
   char * c = b.h, * d;
   for (int i = 0; i < *token_count; ++i) {
     d = bstr_next_delim(b, c, delim);
@@ -237,9 +239,11 @@ Bstr bstr_join(Bstr * tokens, int token_count) {
   int joined_len = 0;
   for (int i = 0; i < token_count; ++i)
     joined_len += bstr_strlen(tokens[i]);
+  
   Bstr b;
   b.h = malloc(sizeof(char)*joined_len);
   assert(b.h != NULL);
+  
   char * h = b.h;
   for (int i = 0; i < token_count; ++i) {
     char * c = tokens[i].h;
@@ -250,6 +254,7 @@ Bstr bstr_join(Bstr * tokens, int token_count) {
     }
   }
   b.nt = b.h + joined_len - 1;
+  
   return b;
 }
 
@@ -361,4 +366,3 @@ char * bstr_lmatch_str(Bstr b, Bstr str) {
 }
 
 #endif
-
