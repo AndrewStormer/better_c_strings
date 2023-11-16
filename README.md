@@ -4,4 +4,5 @@ Strings can easily be wrapped in a Bstr by using the bstr_create(string) functio
 
 # To use:
 #define BETTER_STRINGS_IMPLEMENTATION_
+
 #include "better_strings.h"
