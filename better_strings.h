@@ -2,7 +2,7 @@
 #define BETTER_STRINGS_H_
 
 
-#include <stdio.h>
+#Include <stdio.h>
 #include <stdlib.h>
 #include <assert.h>
 
@@ -37,7 +37,7 @@ void bstr_full_clean(Bstr * b);
 int bstr_count_char(Bstr b, char c);
 void bstr_reverse(Bstr * b);
 void bstr_reverse_tokens(Bstr ** tokens, int token_count);
-char * bstr_lmatch_str(Bstr b, Bstr str);
+int bstr_lmatch(Bstr b, Bstr str);
 
 
 #endif //BETTER_STRINGS_H_
@@ -58,17 +58,20 @@ static int str_strlen(char * s) {
 Bstr bstr_wrap(char * s) {
   Bstr b;
   int len = str_strlen(s)-1;
+  assert(len != 0 && "Cant wrap empty string!");
   b.h = malloc(sizeof(char)*len);
-  b.nt = b.h + len;
-  for (int i = 0; i < len; ++i) {
+  assert(b.h != NULL);
+  b.nt = b.h + len-1;
+  
+  for (int i = 0; i < len; ++i)
     b.h[i] = s[i];
-  }
+    
   return b;
 }
 
 
 //TODO: implement a way to declare in static space so we do not have to free
-//Problem: doing char str[bstr_strlen(b)+1] creates str in the stack, which does not persist after the function is returned from, and so we to return a pointer to that stack spac which breaks.
+//Problem: doing char str[bstr_strlen(b)+1] creates str in the stack, which does not persist after the function is returned from, and so we try to return a pointer to that stack space which changes when stack is used next.
 //*** MUST FREE STRING PASSED BACK FROM FUNCTION
 char * bstr_unwrap(Bstr b) {
   char * str = malloc(sizeof(char)*bstr_strlen(b) + 1);
@@ -147,7 +150,7 @@ static Bstr bstr_resize(Bstr b, int new_len) {
       ++i;
       ++c;
     }
-    free(b.h);
+    bstr_destroy(b);
     b.h = s;
     b.nt = b.h + new_len-1;
   } else {
@@ -159,10 +162,10 @@ static Bstr bstr_resize(Bstr b, int new_len) {
 
 
 void bstr_append_str(Bstr * b, char * s) {
-  int len = bstr_strlen(*b), new_len = str_strlen(s) + len-1;
+  int len = bstr_strlen(*b), new_len = str_strlen(s)-1 + len;
   *b = bstr_resize(*b, new_len);
-  char * c1 = (b->h + (len-1)), * c2 = s;
-  while (c1 < b->nt) {
+  char * c1 = (b->h + (len)), * c2 = s;
+  while (c1 <= b->nt) {
     *c1 = *c2;
     ++c1;
     ++c2;
@@ -172,15 +175,15 @@ void bstr_append_str(Bstr * b, char * s) {
 
 
 void bstr_append(Bstr * b, Bstr s) {
-  int len = bstr_strlen(*b), new_len = bstr_strlen(s) + len-1;
+  int len = bstr_strlen(*b), new_len = bstr_strlen(s) + len;
   *b = bstr_resize(*b, new_len);
-  char * c1 = (b->h + (len-1)), * c2 = s.h;
-  while (c1 < b->nt) {
+  char * c1 = (b->h + (len)), * c2 = s.h;
+  while (c1 <= b->nt) {
     *c1 = *c2;
     ++c1;
     ++c2;
   }
-  b->nt = b->h + new_len-2;
+  b->nt = b->h + new_len-1;
 }
 
 
@@ -264,10 +267,12 @@ void bstr_lclean(Bstr * b) {
   while (*c == ' ') {
     ++c;
   }
-  Bstr * temp = b;
-  Bstr temp2 = bstr_substr(c, b->nt);
-  b = &temp2;
-  bstr_destroy(*b);
+  Bstr nb = bstr_substr(c, b->nt);
+  char * temp = b->h;
+  b->h = nb.h;
+  b->nt = nb.nt;
+  free(temp);
+
 }
 
 
@@ -284,10 +289,11 @@ void bstr_rclean(Bstr * b) {
     --c;
   }
 
-  Bstr * temp = b;
-  Bstr temp2 = bstr_substr(b->h, c);
-  b = &temp2;
-  bstr_destroy(*b);
+  Bstr nb = bstr_substr(b->h, c);
+  char * temp = b->h;
+  b->h = nb.h;
+  b->nt = nb.nt;
+  free(temp);
 }
 
 
@@ -351,18 +357,19 @@ void bstr_reverse_tokens(Bstr ** tokens, int token_count) {
 
 
 //TODO: rmatch_str, edit distance
-char * bstr_lmatch_str(Bstr b, Bstr str) {
+int bstr_lmatch(Bstr b, Bstr str) {
   char * c = b.h, * s = str.h;
 
   while (c <= b.nt) {
     if (*s == *c) {
       if (s == str.nt)
-	return c - (s-str.nt);
+	return (c  - b.h) - bstr_strlen(str) + 1ss;
       ++s;
-    }
+    } else
+      s = str.h;
     ++c;
   }
-  return NULL;
+  return -1;
 }
 
 #endif
