@@ -18,16 +18,16 @@ My motivation behind this project was to make parsing of files easier - especial
     file_parse(FILE *fp, ...) {
         char line[LINE_SIZE];
 
-        while (fgets(line, sizeof(line), fp)) { //or some other way of reading from files (read into buffer)
+        while (fgets(line, sizeof(line), fp)) { //or some other way of reading from files
             bstr_t *b = bstr_wrap(line);
-            uint32_t token_count;
+            uint16_t token_count;
             bstr_t **tokens = bstr_split(b, ' ', &token_count, 0); //We do not want to keep the delim, so 4th parameter 0.
             bstr_clean_tokens(tokens, token_count);
             for (size_t i = 0; i < token_count; ++i) {
                 //process data as you please
                 //pack into parameters or return value
             }
-            bstr_destroy_tokens(tokens); //unless you unwrap strings during for loop, then just free(tokens)
+            bstr_destroy_tokens(tokens); //unless you unwrap strings during the above for loop, replace with free(tokens)
         }
     }
 ```

@@ -12,29 +12,29 @@ typedef struct bstr bstr_t;
 bstr_t *bstr_wrap(char * s);
 char *bstr_unwrap(bstr_t *b);
 void bstr_destroy(bstr_t *b);
-void bstr_destroy_tokens(bstr_t ** tokens, uint32_t token_count);
+void bstr_destroy_tokens(bstr_t ** tokens, uint16_t token_count);
 bstr_t *bstr_substr(char * s, char * e);
 void bstr_print(bstr_t *b);
-void bstr_print_tokens(bstr_t **tokens, uint32_t token_count);
+void bstr_print_tokens(bstr_t **tokens, uint16_t token_count);
 size_t bstr_strlen(bstr_t *b);
-//static bstr bstr_resize(bstr b, uint32_t new_len);
+//static bstr bstr_resize(bstr b, uint16_t new_len);
 void bstr_append_str(bstr_t *b, char * s);
 void bstr_append(bstr_t *b, bstr_t *s);
-//static uint32_t bstr_count_tokens(bstr b, char delim);
+//static uint16_t bstr_count_tokens(bstr b, char delim);
 //static char * bstr_next_token(bstr b, char * h, char delim
-bstr_t **bstr_split(bstr_t *b, char delim, uint32_t *token_count, uint8_t keep_delim);
-bstr_t *bstr_join(bstr_t **b, uint32_t token_count);
+bstr_t **bstr_split(bstr_t *b, char delim, uint16_t *token_count, uint8_t keep_delim);
+bstr_t *bstr_join(bstr_t **b, uint16_t token_count);
 void bstr_lclean(bstr_t *b);
-void bstr_lclean_tokens(bstr_t **tokens, uint32_t token_count);
+void bstr_lclean_tokens(bstr_t **tokens, uint16_t token_count);
 void bstr_rclean(bstr_t *b);
-void bstr_rclean_tokens(bstr_t **tokens, uint32_t token_count);
+void bstr_rclean_tokens(bstr_t **tokens, uint16_t token_count);
 void bstr_clean(bstr_t **b);
-void bstr_clean_tokens(bstr_t ***tokens, uint32_t token_count);
+void bstr_clean_tokens(bstr_t ***tokens, uint16_t token_count);
 void bstr_full_clean(bstr_t *b);
-uint32_t bstr_count_char(bstr_t *b, char c);
+uint16_t bstr_count_char(bstr_t *b, char c);
 void bstr_reverse(bstr_t *b);
-void bstr_reverse_tokens(bstr_t **tokens, uint32_t token_count);
-uint32_t bstr_lmatch(bstr_t *b, bstr_t *str);
+void bstr_reverse_tokens(bstr_t **tokens, uint16_t token_count);
+uint16_t bstr_lmatch(bstr_t *b, bstr_t *str);
 
 
 #endif //BETTER_STRINGS_H_
@@ -72,12 +72,12 @@ static bstr_t *bstr_create(size_t len) {
 }
 
 
-static uint32_t bstr_count_tokens(bstr_t *b, char delim) {
+static uint16_t bstr_count_tokens(bstr_t *b, char delim) {
   if (!b)
     return -1;
 
   char * c = b->h;
-  uint32_t count = 0;
+  uint16_t count = 0;
   if (*c == delim)
     ++count;
   ++c;
@@ -190,7 +190,7 @@ void bstr_destroy(bstr_t *b) {
 }
 
 
-inline void bstr_destroy_tokens(bstr_t **tokens, uint32_t token_count) {
+inline void bstr_destroy_tokens(bstr_t **tokens, uint16_t token_count) {
   for (size_t i = 0; i < token_count; ++i)
     bstr_destroy(tokens[i]);
 }
@@ -230,7 +230,7 @@ void bstr_print(bstr_t *b) {
 }
 
 
-void bstr_print_tokens(bstr_t **tokens, uint32_t token_count) {
+void bstr_print_tokens(bstr_t **tokens, uint16_t token_count) {
   for (size_t i = 0; i < token_count; i++) {
     bstr_print(tokens[i]);
   }
@@ -277,7 +277,7 @@ void bstr_append(bstr_t *b, bstr_t *s) {
 
 
 //token_count is passed by reference, when keep_delim is 1 we keep the last found delim (if multiple delims, it keeps all of them)
-bstr_t **bstr_split(bstr_t *b, char delim, uint32_t *token_count, uint8_t keep_delim) {
+bstr_t **bstr_split(bstr_t *b, char delim, uint16_t *token_count, uint8_t keep_delim) {
   if (!b)
     return NULL;
   
@@ -302,10 +302,10 @@ bstr_t **bstr_split(bstr_t *b, char delim, uint32_t *token_count, uint8_t keep_d
 }
 
 
-bstr_t *bstr_join(bstr_t **tokens, uint32_t token_count) {
+bstr_t *bstr_join(bstr_t **tokens, uint16_t token_count) {
   if (!tokens || token_count == 0)
     return NULL;
-  uint32_t joined_len = 0;
+  uint16_t joined_len = 0;
   for (size_t i = 0; i < token_count; ++i)
     joined_len += bstr_strlen(tokens[i]);
   
@@ -346,7 +346,7 @@ void bstr_lclean(bstr_t *b) {
 }
 
 
-void bstr_lclean_tokens(bstr_t **tokens, uint32_t token_count) {
+void bstr_lclean_tokens(bstr_t **tokens, uint16_t token_count) {
   if (tokens && token_count > 0) {
     for (size_t i = 0; i < token_count; ++i) {
       bstr_lclean(tokens[i]);
@@ -373,7 +373,7 @@ void bstr_rclean(bstr_t *b) {
 }
 
 
-void bstr_rclean_tokens(bstr_t **tokens, uint32_t token_count) {
+void bstr_rclean_tokens(bstr_t **tokens, uint16_t token_count) {
   if (tokens && token_count > 0) {
     for (size_t i = 0; i < token_count; ++i) {
       bstr_rclean(tokens[i]);
@@ -403,7 +403,7 @@ void bstr_clean(bstr_t **b) {
 }
 
 
-void bstr_clean_tokens(bstr_t ***tokens, uint32_t token_count) {
+void bstr_clean_tokens(bstr_t ***tokens, uint16_t token_count) {
   if (tokens && token_count > 0) {
     for (size_t i = 0; i < token_count; ++i) {
       bstr_clean(&(*tokens)[i]);
@@ -414,7 +414,7 @@ void bstr_clean_tokens(bstr_t ***tokens, uint32_t token_count) {
 
 void bstr_full_clean(bstr_t * b) {
   if (b) {
-    uint32_t token_count = 0;
+    uint16_t token_count = 0;
     bstr_t **tokens = bstr_split(b,  ' ', &token_count, 0);
     bstr_clean_tokens(&tokens, token_count);
     b = bstr_join(tokens, token_count);
@@ -423,8 +423,8 @@ void bstr_full_clean(bstr_t * b) {
 }
 
 
-uint32_t bstr_count_char(bstr_t *b, char c) {
-  uint32_t count = 0;
+uint16_t bstr_count_char(bstr_t *b, char c) {
+  uint16_t count = 0;
   for (char * p = b->h; p <= b->nt; ++p) {
     if (*p == c)
       ++count;
@@ -446,7 +446,7 @@ void bstr_reverse(bstr_t *b) {
 }
 
 
-void bstr_reverse_tokens(bstr_t ** tokens, uint32_t token_count) {
+void bstr_reverse_tokens(bstr_t ** tokens, uint16_t token_count) {
   for (size_t i = 0; i < token_count; ++i) {
     bstr_reverse(tokens[i]);
   }
@@ -454,7 +454,7 @@ void bstr_reverse_tokens(bstr_t ** tokens, uint32_t token_count) {
 
 
 //TODO: rmatch_str, edit distance
-uint32_t bstr_lmatch(bstr_t *b, bstr_t *str) {
+uint16_t bstr_lmatch(bstr_t *b, bstr_t *str) {
   char * c = b->h, * s = str->h;
 
   while (c <= b->nt) {

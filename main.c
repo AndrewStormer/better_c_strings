@@ -20,7 +20,7 @@ int main(void) {
     //printf("%d\n", count);
 
     
-    uint32_t token_count;
+    uint16_t token_count;
     bstr_t **tokens = bstr_split(b,  ' ', &token_count, 1);
 
     bstr_print_tokens(tokens, token_count);
