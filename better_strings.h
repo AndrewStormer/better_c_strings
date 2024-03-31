@@ -3,11 +3,12 @@
 
 #include <stdio.h>
 #include <stdlib.h>
-#include <assert.h>
 #include <sys/types.h>
 
 
-typedef struct bstr bstr_t;
+typedef struct bstr {
+  char * h, * nt; //head and null terminator (not actually saving space for '\0', we know we are at the end if a pointer points to bstr.nt.
+} bstr_t;
 
 bstr_t *bstr_wrap(char * s);
 char *bstr_unwrap(bstr_t *b);
@@ -17,23 +18,20 @@ bstr_t *bstr_substr(char * s, char * e);
 void bstr_print(bstr_t *b);
 void bstr_print_tokens(bstr_t **tokens, uint16_t token_count);
 size_t bstr_strlen(bstr_t *b);
-//static bstr bstr_resize(bstr b, uint16_t new_len);
-void bstr_append_str(bstr_t *b, char * s);
-void bstr_append(bstr_t *b, bstr_t *s);
-//static uint16_t bstr_count_tokens(bstr b, char delim);
-//static char * bstr_next_token(bstr b, char * h, char delim
+uint8_t bstr_append_str(bstr_t *b, char * s);
+uint8_t bstr_append(bstr_t *b, bstr_t *s);
 bstr_t **bstr_split(bstr_t *b, char delim, uint16_t *token_count, uint8_t keep_delim);
 bstr_t *bstr_join(bstr_t **b, uint16_t token_count);
-void bstr_lclean(bstr_t *b);
-void bstr_lclean_tokens(bstr_t **tokens, uint16_t token_count);
-void bstr_rclean(bstr_t *b);
-void bstr_rclean_tokens(bstr_t **tokens, uint16_t token_count);
-void bstr_clean(bstr_t **b);
-void bstr_clean_tokens(bstr_t ***tokens, uint16_t token_count);
-void bstr_full_clean(bstr_t *b);
+uint8_t bstr_lclean(bstr_t **b);
+uint8_t bstr_lclean_tokens(bstr_t **tokens, uint16_t token_count);
+uint8_t bstr_rclean(bstr_t **b);
+uint8_t bstr_rclean_tokens(bstr_t **tokens, uint16_t token_count);
+uint8_t bstr_clean(bstr_t **b);
+uint8_t bstr_clean_tokens(bstr_t **tokens, uint16_t token_count);
+uint8_t bstr_full_clean(bstr_t *b);
 uint16_t bstr_count_char(bstr_t *b, char c);
-void bstr_reverse(bstr_t *b);
-void bstr_reverse_tokens(bstr_t **tokens, uint16_t token_count);
+uint8_t bstr_reverse(bstr_t *b);
+uint8_t bstr_reverse_tokens(bstr_t **tokens, uint16_t token_count);
 uint16_t bstr_lmatch(bstr_t *b, bstr_t *str);
 
 
@@ -41,20 +39,17 @@ uint16_t bstr_lmatch(bstr_t *b, bstr_t *str);
 
 #ifdef  BETTER_STRINGS_IMPLEMENTATION_
 
-//Opaque data structure
-struct bstr {
-  char * h, * nt; //head and null terminator (not actually saving space for '\0', we know we are at the end if a pointer points to bstr.nt.
-};
-
 //NOTE: These are internal functions to be reused by bstr interface functions; Those should be used instead
 
+//Returns the length of a null terminated array of characters
 static size_t str_strlen(char * s) {
   char * c = s;
   while (*c != '\0') {
     ++c;
   }
-  return (c - s) + 1;
+  return (c - s)+1;
 }
+
 
 static bstr_t *bstr_create(size_t len) {
   bstr_t * b = malloc(sizeof(bstr_t));
@@ -197,24 +192,16 @@ inline void bstr_destroy_tokens(bstr_t **tokens, uint16_t token_count) {
 
 
 bstr_t *bstr_substr(char *s, char *e) {
-  if (!s || !e)
+  if (!s || !e || (e-s) < 0)
     return NULL;
-  bstr_t *b = malloc(sizeof(bstr_t));
-  if (!b)
-    return NULL;
+  
+  size_t len = (e-s)+1;
+  bstr_t *b = bstr_create(len);
 
-  b->h = malloc(sizeof(char)*(e-s)+1);
-  if (!b->h) {
-    free(b);
-    return NULL;
-  }
-
-  b->nt = b->h;
-  char *c = s;
-  while (c <= e) {
-    *b->nt = *c;
-    ++c;
-    ++b->nt;
+  char * ptr = b->h;
+  for (char * i = s; i <= e; ++i) {
+    *ptr = *i;
+    ++ptr;
   }
   return b;
 }
@@ -243,34 +230,52 @@ inline size_t bstr_strlen(bstr_t *b) {
 }
 
 
-void bstr_append_str(bstr_t *b, char *s) {
-  if (b && s) {
-    size_t len = bstr_strlen(b);
-    size_t new_len = str_strlen(s)-1 + len;
-    b = bstr_resize(b, new_len);
-    char * c1 = ((b)->h + len);
-    char * c2 = s;
-    while (c1 <= (b)->nt) {
-      *c1 = *c2;
-      ++c1;
-      ++c2;
-    }
-    (b)->nt = (b)->h + (new_len-1);
+uint8_t bstr_append_str(bstr_t *b, char *s) {
+  if (!b || !s)
+    return -1;
+
+  size_t len = bstr_strlen(b);
+  size_t new_len = str_strlen(s) - 1 + len;
+  if (len < 0 || new_len < 0) //should never happen
+    return -1;
+  
+  b->nt = b->h + new_len-1;
+
+  b = bstr_resize(b, new_len);
+  if (!b)
+    return -1;
+  char *c1 = ((b)->h + len);
+  while (c1 <= (b)->nt) {
+    *c1 = *s;
+    ++c1;
+    ++s;
   }
+  return 0;
 }
 
 
-void bstr_append(bstr_t *b, bstr_t *s) {
+uint8_t bstr_append(bstr_t *b, bstr_t *s) {
+  if (!b || !s)
+    return -1;
   size_t len = bstr_strlen(b);
   size_t new_len = bstr_strlen(s) + len;
+  if (len < 0 || new_len < 0) //should never happen
+    return -1;
+
+
   b = bstr_resize(b, new_len);
+  if (!b)
+    return -1;
+
+  b->nt = b->h + new_len-1;
+
   char * c1 = (b->h + (len)), * c2 = s->h;
   while (c1 <= b->nt) {
     *c1 = *c2;
     ++c1;
     ++c2;
   }
-  b->nt = b->h + new_len-1;
+  return 0;
 }
 
 
@@ -282,7 +287,7 @@ bstr_t **bstr_split(bstr_t *b, char delim, uint16_t *token_count, uint8_t keep_d
     return NULL;
   
   *token_count = bstr_count_tokens(b, delim);
-  if (*token_count <= 1)
+  if (*token_count < 1)
     return NULL;
   bstr_t **tokens = malloc(sizeof(bstr_t *)*(*token_count));
   if (!tokens)
@@ -328,98 +333,124 @@ bstr_t *bstr_join(bstr_t **tokens, uint16_t token_count) {
 }
 
 
-void bstr_lclean(bstr_t *b) {
-  if (b) {
-    char * c = b->h;
-    while ((int)*c == ' ') {
-      ++c;
-    }
+uint8_t bstr_lclean(bstr_t **b) {
+  if (!*b || !(*b)->h)
+    return -1;
 
-    if (c != b->h) {
-      bstr_t *nb = bstr_substr(c, b->nt);
-      if (nb && b != nb) {
-        bstr_destroy(b);
-        b = nb;
-      }
-    }
-  }
+  if ((int)*(*b)->h != ' ')
+    return 0;
+  char *c = (*b)->h;
+  while ((int)*c == ' ')
+    ++c;
+
+  bstr_t *nb = bstr_substr(c, (*b)->nt);
+  if (nb && b != &nb) {
+    bstr_destroy(*b);
+    *b = nb;
+    (*b)->h = nb->h;
+    (*b)->nt = nb->nt;
+  } else 
+    return -1;
+  return 0;
 }
 
 
-void bstr_lclean_tokens(bstr_t **tokens, uint16_t token_count) {
-  if (tokens && token_count > 0) {
-    for (size_t i = 0; i < token_count; ++i) {
-      bstr_lclean(tokens[i]);
-    }
+uint8_t bstr_lclean_tokens(bstr_t **tokens, uint16_t token_count) {
+  if (!tokens || token_count <= 0) 
+    return -1;
+  for (size_t i = 0; i < token_count; ++i) {
+   if (bstr_lclean(&tokens[i]) < 0)
+    return -1;
   }
+
+  return 0;
 }
 
 
-void bstr_rclean(bstr_t *b) {
-  if (!b) {
-    char * c = b->nt;
-    while ((int)*c == ' ') {
-      --c;
-    }
+uint8_t bstr_rclean(bstr_t **b) {
+  if (!*b || !(*b)->h)
+    return -1;
 
-    if (c != b->nt) {
-      bstr_t *nb = bstr_substr(b->h, c);
-      if (nb && b != nb) {
-        bstr_destroy(b);
-        b = nb;
-      }
-    }
-  }
+  if ((int)*(*b)->nt != ' ')
+    return 0;
+  char *c = (*b)->nt;
+  while ((int)*c == ' ')
+    --c;
+
+  bstr_t *nb = bstr_substr((*b)->h, c);
+  if (nb && b != &nb) {
+    bstr_destroy(*b);
+    *b = nb;
+    (*b)->h = nb->h;
+    (*b)->nt = nb->nt;
+  } else 
+    return -1;
+  return 0;
 }
 
 
-void bstr_rclean_tokens(bstr_t **tokens, uint16_t token_count) {
-  if (tokens && token_count > 0) {
-    for (size_t i = 0; i < token_count; ++i) {
-      bstr_rclean(tokens[i]);
-    }
+uint8_t bstr_rclean_tokens(bstr_t **tokens, uint16_t token_count) {
+  if (!tokens || token_count <= 0) 
+    return -1;
+  for (size_t i = 0; i < token_count; ++i) {
+   if (bstr_rclean(&tokens[i]) < 0)
+    return -1;
   }
+
+  return 0;
 }
 
 
-void bstr_clean(bstr_t **b) {
-  if (b && *b) {
-    char * c1 = (*b)->h;
-    while ((int)*c1 == ' ')
-      ++c1;
-    
-    char * c2 = (*b)->nt;
-    while ((int)*c2 == ' ')
-      --c2;
-    
-    if (c1 != (*b)->h && c2 != (*b)->nt) {
-      bstr_t *nb = bstr_substr(c1, c2);
-      if (nb && &nb != b) {
-        bstr_destroy(*b);
-        b = &nb;
-      }
-    }
+uint8_t bstr_clean(bstr_t **b) {
+  if (!b && !*b)
+    return -1;
+
+  if ((int)*(*b)->h != ' ' && (int)*(*b)->nt != ' ')
+    return 0;
+
+  char *c1 = (*b)->h;
+  while ((int)*c1 == ' ')
+    ++c1;
+
+  char *c2 = (*b)->nt;
+  while ((int)*c2 == ' ')
+    --c2;
+
+  bstr_t *nb = bstr_substr(c1, c2);
+  if (nb && &nb != b) {
+    bstr_destroy(*b);
+    *b = nb;
+    (*b)->h = nb->h;
+    (*b)->nt = nb->nt;
   }
+  return 0;
 }
 
 
-void bstr_clean_tokens(bstr_t ***tokens, uint16_t token_count) {
-  if (tokens && token_count > 0) {
-    for (size_t i = 0; i < token_count; ++i) {
-      bstr_clean(&(*tokens)[i]);
-    }
+uint8_t bstr_clean_tokens(bstr_t **tokens, uint16_t token_count) {
+  if (!tokens || token_count < 1)
+    return -1;
+
+  for (size_t i = 0; i < token_count; ++i) {
+      if (bstr_clean(&tokens[i]) < 0)
+        return -1;
   }
+
+  return 0;
 }
 
 
-void bstr_full_clean(bstr_t * b) {
-  if (b) {
-    uint16_t token_count = 0;
-    bstr_t **tokens = bstr_split(b,  ' ', &token_count, 0);
-    bstr_clean_tokens(&tokens, token_count);
-    b = bstr_join(tokens, token_count);
-    bstr_destroy_tokens(tokens, token_count);
-  }
+uint8_t bstr_full_clean(bstr_t * b) {
+  if (!b)
+    return -1;
+
+  uint16_t token_count = 0;
+  bstr_t **tokens = bstr_split(b,  ' ', &token_count, 0);
+  bstr_clean_tokens(tokens, token_count);
+  b = bstr_join(tokens, token_count);
+  bstr_destroy_tokens(tokens, token_count);
+
+  return 0;
 }
 
 
@@ -433,7 +464,9 @@ uint16_t bstr_count_char(bstr_t *b, char c) {
 }
 
 
-void bstr_reverse(bstr_t *b) {
+uint8_t bstr_reverse(bstr_t *b) {
+  if (!b) 
+    return -1;
   char * s = b->h, * e = b->nt;
 
   while (e > s) {
@@ -443,13 +476,18 @@ void bstr_reverse(bstr_t *b) {
     ++s;
     --e;
   }
+  return 0;
 }
 
 
-void bstr_reverse_tokens(bstr_t ** tokens, uint16_t token_count) {
+uint8_t bstr_reverse_tokens(bstr_t ** tokens, uint16_t token_count) {
+  if (!tokens || token_count < 1)
+    return -1;
   for (size_t i = 0; i < token_count; ++i) {
-    bstr_reverse(tokens[i]);
+    if (bstr_reverse(tokens[i]) < 0)
+      return -1;
   }
+  return 0;
 }
 
 

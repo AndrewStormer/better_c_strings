@@ -16,6 +16,10 @@ int main(void) {
     bstr_print(b);
     printf("%zu\n", bstr_strlen(b));
 
+    bstr_t *b3 = bstr_substr(b->h, b->h + 11);
+    bstr_print(b3);
+
+
     //int count = bstr_count_char(b, 'l');
     //printf("%d\n", count);
 
@@ -25,14 +29,14 @@ int main(void) {
 
     bstr_print_tokens(tokens, token_count);
     
-    //bstr_lclean_tokens(tokens, token_count);
+    bstr_rclean_tokens(tokens, token_count);
     bstr_print_tokens(tokens, token_count);
 
     printf("akdsljf;ldskjf\n");
     bstr_reverse_tokens(tokens, token_count);
     bstr_print_tokens(tokens, token_count);
 
-    //bstr_print_tokens(tokens, token_count);
+    bstr_print_tokens(tokens, token_count);
     bstr_reverse_tokens(tokens, token_count);
     
     bstr_t *joined_tokens = bstr_join(tokens, token_count);

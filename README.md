@@ -22,7 +22,7 @@ file_parse(FILE *fp, ...) {
         bstr_t *b = bstr_wrap(line);
         uint16_t token_count;
         bstr_t **tokens = bstr_split(b, ' ', &token_count, 0); //We do not want to keep the delim, so 4th parameter 0.
-        bstr_clean_tokens(tokens, token_count);
+        bstr_clean_tokens(tokens, token_count); //clean all whitespace from the tokens
         for (size_t i = 0; i < token_count; ++i) {
             //process data as you please
             //pack into parameters or return value
@@ -33,7 +33,9 @@ file_parse(FILE *fp, ...) {
 ```
 
 ## TODO:
-Refector bstr_xclean algorithms.
+More comments!
+
+-----Refector bstr_xclean algorithms.-----
 
 Split function that make check several delimitters
 
@@ -43,4 +45,6 @@ Build Directory.
 
 Potentially return string statically in bstr_unwrap, or take an already pre-allocated (statically or dynamically) char * as a second parameter to unwrap into, making unwrap void.
 
-Make void functions return error codes? Potentially make functions that must return accept a code as a pass-by-reference parameter.
+-----Make void functions return error codes?-----
+
+Potentially make functions that must return accept a code as a pass-by-reference parameter.
