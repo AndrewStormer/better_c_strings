@@ -27,7 +27,7 @@ size_t bstr_strlen(bstr_t *b);
 uint16_t bstr_count_char(bstr_t *b, char c);
 
 //String Algorithms
-bstr_t *bstr_substr(char * s, char * e);
+bstr_t *bstr_substr(bstr_t *b, uint32_t start, size_t len);
 uint16_t bstr_append_str(bstr_t *b, char * s);
 uint16_t bstr_append(bstr_t *b, bstr_t *s);
 bstr_t **bstr_split(bstr_t *b, char delim, uint16_t *token_count, uint8_t keep_delim);
@@ -160,10 +160,28 @@ static bstr_t *bstr_resize(bstr_t *b, size_t new_len) {
   return b;
 }
 
+//DANGEROUS: IF s AND e ARE NOT POINTERS TO THE SAME bstr_t, LONG LOOP
+//Creates a new bstr_t substring that runs from s to e
+//Returns the substr, or NULL on error
+static bstr_t *bstr_substr_s(char *s, char *e) {
+  if (!s || !e || (e-s) < 0)
+    return NULL;
+  
+  size_t len = (e-s)+1;
+  bstr_t *b = bstr_create(len);
+
+  char * ptr = b->h;
+  for (char * i = s; i <= e; ++i) {
+    *ptr = *i;
+    ++ptr;
+  }
+  return b;
+}
+
 
 //bstr_t interface functions:
 
-//*** USER ALWAYS RESPONSIBLE FOR FREEING BSTR MEMORY USING GIVEN: bstr_destroy(b) & bstr_destroy_tokens(tokens, count)
+//*** USER ALWAYS RESPONSIBLE FOR FREEING BSTR MEMORY USING GIVEN DESTROY FUNCTIONS IF NOT UNWRAPPED
 //*** THIS MEANS SERIALIZE, JOIN, ETC. DO NOT DESTROY THE GIVEN BSTR
 //Wraps a null-terminated string s into a new bstr_t struct pointer
 //Returns the new bstr_t pointer, or NULL on error
@@ -228,6 +246,7 @@ uint16_t bstr_destroy(bstr_t *b) {
 }
 
 
+//Destroys the array of bstr_t struct pointers
 //Returns 0 on success, -1 for any failure
 inline uint16_t bstr_destroy_tokens(bstr_t **tokens, uint16_t token_count) {
   for (size_t i = 0; i < token_count; ++i) {
@@ -238,7 +257,7 @@ inline uint16_t bstr_destroy_tokens(bstr_t **tokens, uint16_t token_count) {
 }
 
 
-//Returns 0 on success, -1 for any failure
+//Prints a bstr_r pointer
 void bstr_print(bstr_t *b) {
   if (b) {
     char * c = b->h;
@@ -251,21 +270,25 @@ void bstr_print(bstr_t *b) {
 }
 
 
+//Prints an array of bstr_t pointers
 void bstr_print_tokens(bstr_t **tokens, uint16_t token_count) {
-  for (size_t i = 0; i < token_count; i++) {
-    bstr_print(tokens[i]);
+  if (tokens && token_count > 0) {
+    for (size_t i = 0; i < token_count; i++) {
+      bstr_print(tokens[i]);
+    }
   }
 }
 
 	     
-
 //we do not keep an extra space for the null terminator
+//Returns the length of a bstr_t, or 0 for invalid bstr_t
 inline size_t bstr_strlen(bstr_t *b) {
-  return (b->h == NULL) ? 0 : b->nt - b->h + 1;
+  return (!b || !b->h) ? 0 : b->nt - b->h + 1;
 }
 
 
-//Returns 0 on success, -1 for any failure
+//Counts the instances of a specific character in the string
+//Returns the count on success, -1 for any failure
 uint16_t bstr_count_char(bstr_t *b, char c) {
   if (!b)
     return -1;
@@ -279,23 +302,27 @@ uint16_t bstr_count_char(bstr_t *b, char c) {
 }
 
 
-//Returns 0 on success, -1 for any failure
-bstr_t *bstr_substr(char *s, char *e) {
-  if (!s || !e || (e-s) < 0)
+//Creates a new bstr_t substring that runs from s to e
+//Returns the substr, or NULL on error
+bstr_t *bstr_substr(bstr_t *b, uint32_t start, size_t len) {
+  if (!b || start < 0 || start > bstr_strlen(b) || len == 0)
+    return NULL;
+
+  bstr_t *s = bstr_create(len);
+  if (!s)
     return NULL;
   
-  size_t len = (e-s)+1;
-  bstr_t *b = bstr_create(len);
-
-  char * ptr = b->h;
-  for (char * i = s; i <= e; ++i) {
-    *ptr = *i;
-    ++ptr;
+  char *h = s->h;
+  char* c = b->h + start;
+  for (; c < b->h + (start + len) && c < b->nt; ++c) {
+    *h = *c;
+    ++h;
   }
-  return b;
+  return s;
 }
 
 
+//Appends a null terminated string onto the end of b
 //Returns 0 on success, -1 for any failure
 uint16_t bstr_append_str(bstr_t *b, char *s) {
   if (!b || !s)
@@ -322,6 +349,7 @@ uint16_t bstr_append_str(bstr_t *b, char *s) {
 
 
 //*** DOES NOT DESTROY s
+//Appends a bstr_t s to the end of another bstr_t b
 //Returns 0 on success, -1 for any failure
 uint16_t bstr_append(bstr_t *b, bstr_t *s) {
   if (!b || !s)
@@ -349,10 +377,17 @@ uint16_t bstr_append(bstr_t *b, bstr_t *s) {
 
 
 //*** DOES NOT DESTROY b
-//token_count is passed by reference, when keep_delim is 1 we keep the last found delim (if multiple delims, it keeps all of them)
+//Splits the bstr_t into tokens given the delim
+//parameter token_count passed by reference; to be changed by the function
+//parameter keep_delim is 0 if tokens should not contain the delimitter provided, 1 if they should
+//Returns token_count amount of tokens, split from the bstr_t *b given by delim
 bstr_t **bstr_split(bstr_t *b, char delim, uint16_t *token_count, uint8_t keep_delim) {
-  if (!b)
+  if (!b || !token_count)
     return NULL;
+  
+  uint8_t kd = 0;
+  if (keep_delim != 0)
+    kd = 1; //To accept user input of keep_delim other than 0 or 1 (if not 0, assume 1)
   
   *token_count = bstr_count_tokens(b, delim);
   if (*token_count < 1)
@@ -365,18 +400,20 @@ bstr_t **bstr_split(bstr_t *b, char delim, uint16_t *token_count, uint8_t keep_d
   char * d;
   for (size_t i = 0; i < *token_count; ++i) {
     d = bstr_next_delim(b, c, delim);
-    if (keep_delim == 1 && d != b->nt) {
+    if (kd == 1 && d != b->nt) {
       d = bstr_next_non_delim(b, d, delim);
       --d;
     }
-    tokens[i] = bstr_substr(c, d - (1 - keep_delim));
+    tokens[i] = bstr_substr_s(c, d - (1 - kd));
     c = bstr_next_non_delim(b, d, delim);
   }
   return tokens;
 }
 
 
-//*** DOES NOT DESTROY b
+//*** DOES NOT DESTROY tokens
+//Joins token_count tokens into 1 long bstr_t
+//returns the joined bstr_t, or NULL on faliure
 bstr_t *bstr_join(bstr_t **tokens, uint16_t token_count) {
   if (!tokens || token_count == 0)
     return NULL;
@@ -403,6 +440,7 @@ bstr_t *bstr_join(bstr_t **tokens, uint16_t token_count) {
 }
 
 
+//Reverses the given bstr_t in place
 //Returns 0 on success, -1 for any failure
 uint16_t bstr_reverse(bstr_t *b) {
   if (!b) 
@@ -420,6 +458,7 @@ uint16_t bstr_reverse(bstr_t *b) {
 }
 
 
+//Reverses token_count bstr_t's
 //Returns 0 on success, -1 for any failure
 uint16_t bstr_reverse_tokens(bstr_t ** tokens, uint16_t token_count) {
   if (!tokens || token_count < 1)
@@ -432,10 +471,11 @@ uint16_t bstr_reverse_tokens(bstr_t ** tokens, uint16_t token_count) {
 }
 
 
-//Returns the index of the first letter of the first occurence of str on success, -1 for any failure
+//Returns the index of the first letter of the first occurence of str on success
+//Or -2 for invalid parameters, or -1 for str not in b
 uint16_t bstr_lmatch(bstr_t *b, bstr_t *str) {
   if (!b || !b->h || !str || !str->nt)
-    return -1;
+    return -2;
 
   char * c = b->h;
   char * s = str->h;
@@ -453,10 +493,11 @@ uint16_t bstr_lmatch(bstr_t *b, bstr_t *str) {
 }
 
 
-//Returns the index of the first letter of the last occurence of str on success, -1 for any failure
+//Returns the index of the first letter of the last occurence of str on success
+//Returns -2 for invalid parameters, or -1 for str not in b
 uint16_t bstr_rmatch(bstr_t *b, bstr_t *str) {
   if (!b || !b->h || !str || !str->nt)
-    return -1;
+    return -2;
 
   char * c = b->nt;
   char * s = str->nt;
@@ -474,6 +515,7 @@ uint16_t bstr_rmatch(bstr_t *b, bstr_t *str) {
 }
 
 
+//Deletes all the whitespace on the left of the string
 //Returns 0 on success, -1 for any failure
 uint16_t bstr_lclean(bstr_t **b) {
   if (!*b || !(*b)->h)
@@ -485,7 +527,7 @@ uint16_t bstr_lclean(bstr_t **b) {
   while ((int)*c == ' ')
     ++c;
 
-  bstr_t *nb = bstr_substr(c, (*b)->nt);
+  bstr_t *nb = bstr_substr_s(c, (*b)->nt);
   if (nb && b != &nb) {
     bstr_destroy(*b);
     *b = nb;
@@ -497,6 +539,7 @@ uint16_t bstr_lclean(bstr_t **b) {
 }
 
 
+//Deletes all the whitespace on the left of token_count tokens
 //Returns 0 on success, -1 for any failure
 uint16_t bstr_lclean_tokens(bstr_t **tokens, uint16_t token_count) {
   if (!tokens || token_count <= 0) 
@@ -510,6 +553,7 @@ uint16_t bstr_lclean_tokens(bstr_t **tokens, uint16_t token_count) {
 }
 
 
+//Deletes all the whitespace on the right of the string
 //Returns 0 on success, -1 for any failure
 uint16_t bstr_rclean(bstr_t **b) {
   if (!*b || !(*b)->h)
@@ -521,7 +565,7 @@ uint16_t bstr_rclean(bstr_t **b) {
   while ((int)*c == ' ')
     --c;
 
-  bstr_t *nb = bstr_substr((*b)->h, c);
+  bstr_t *nb = bstr_substr_s((*b)->h, c);
   if (nb && b != &nb) {
     bstr_destroy(*b);
     *b = nb;
@@ -533,6 +577,7 @@ uint16_t bstr_rclean(bstr_t **b) {
 }
 
 
+//Deletes all the whitespace on the right of token_count tokens
 //Returns 0 on success, -1 for any failure
 uint16_t bstr_rclean_tokens(bstr_t **tokens, uint16_t token_count) {
   if (!tokens || token_count <= 0) 
@@ -546,6 +591,7 @@ uint16_t bstr_rclean_tokens(bstr_t **tokens, uint16_t token_count) {
 }
 
 
+//Deletes all the whitespace on both sides of the string
 //Returns 0 on success, -1 for any failure
 uint16_t bstr_clean(bstr_t **b) {
   if (!b && !*b)
@@ -562,7 +608,7 @@ uint16_t bstr_clean(bstr_t **b) {
   while ((int)*c2 == ' ')
     --c2;
 
-  bstr_t *nb = bstr_substr(c1, c2);
+  bstr_t *nb = bstr_substr_s(c1, c2);
   if (nb && &nb != b) {
     bstr_destroy(*b);
     *b = nb;
@@ -573,6 +619,7 @@ uint16_t bstr_clean(bstr_t **b) {
 }
 
 
+//Deletes all the whitespace on both sides of token_count tokens
 //Returns 0 on success, -1 for any failure
 uint16_t bstr_clean_tokens(bstr_t **tokens, uint16_t token_count) {
   if (!tokens || token_count < 1)
@@ -587,6 +634,7 @@ uint16_t bstr_clean_tokens(bstr_t **tokens, uint16_t token_count) {
 }
 
 
+//Deletes all of the whitespace in the string
 //Returns 0 on success, -1 for any failure
 uint16_t bstr_full_clean(bstr_t * b) {
   if (!b)

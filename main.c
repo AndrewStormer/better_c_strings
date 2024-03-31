@@ -16,8 +16,6 @@ int main(void) {
     bstr_print(b);
     printf("%zu\n", bstr_strlen(b));
 
-    bstr_t *b3 = bstr_substr(b->h, b->h + 11);
-    bstr_print(b3);
 
 
     //int count = bstr_count_char(b, 'l');
