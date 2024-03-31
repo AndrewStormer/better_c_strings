@@ -4,6 +4,8 @@
 #include <stdio.h>
 #include <stdlib.h>
 #include <sys/types.h>
+#include <unistd.h>
+#include <fcntl.h>
 
 
 typedef struct bstr {
@@ -33,6 +35,9 @@ uint16_t bstr_count_char(bstr_t *b, char c);
 uint16_t bstr_reverse(bstr_t *b);
 uint16_t bstr_reverse_tokens(bstr_t **tokens, uint16_t token_count);
 uint16_t bstr_lmatch(bstr_t *b, bstr_t *str);
+uint16_t bstr_rmatch(bstr_t *b, bstr_t *str);
+uint16_t bstr_serialize(bstr_t *b, char *filename);
+bstr_t *bstr_deserialize(char *filename);
 
 
 #endif //BETTER_STRINGS_H_
@@ -147,6 +152,8 @@ static bstr_t *bstr_resize(bstr_t *b, size_t new_len) {
 
 //bstr interface function:
 
+//*** USER ALWAYS RESPONSIBLE FOR FREEING BSTR MEMORY USING GIVEN: bstr_destroy(b) & bstr_destroy_tokens(tokens, count)
+//*** THIS MEANS SERIALIZE, JOIN, ETC. DO NOT DESTROY THE GIVEN BSTR
 //Wraps a null-terminated string s into a new bstr_t struct pointer
 //Returns the new bstr_t pointer, or NULL on error
 bstr_t *bstr_wrap(char * s) {
@@ -288,6 +295,7 @@ uint16_t bstr_append_str(bstr_t *b, char *s) {
 }
 
 
+//*** DOES NOT DESTROY s
 //Returns 0 on success, -1 for any failure
 uint16_t bstr_append(bstr_t *b, bstr_t *s) {
   if (!b || !s)
@@ -314,6 +322,7 @@ uint16_t bstr_append(bstr_t *b, bstr_t *s) {
 }
 
 
+//*** DOES NOT DESTROY b
 //token_count is passed by reference, when keep_delim is 1 we keep the last found delim (if multiple delims, it keeps all of them)
 bstr_t **bstr_split(bstr_t *b, char delim, uint16_t *token_count, uint8_t keep_delim) {
   if (!b)
@@ -340,6 +349,7 @@ bstr_t **bstr_split(bstr_t *b, char delim, uint16_t *token_count, uint8_t keep_d
 }
 
 
+//*** DOES NOT DESTROY b
 bstr_t *bstr_join(bstr_t **tokens, uint16_t token_count) {
   if (!tokens || token_count == 0)
     return NULL;
@@ -486,6 +496,7 @@ uint16_t bstr_full_clean(bstr_t * b) {
 
   uint16_t token_count = 0;
   bstr_t **tokens = bstr_split(b,  ' ', &token_count, 0);
+  bstr_destroy(b);
   bstr_clean_tokens(tokens, token_count);
   b = bstr_join(tokens, token_count);
   bstr_destroy_tokens(tokens, token_count);
@@ -537,9 +548,13 @@ uint16_t bstr_reverse_tokens(bstr_t ** tokens, uint16_t token_count) {
 }
 
 
-//Returns 0 on success, -1 for any failure
+//Returns the index of the first letter of the first occurence of str on success, -1 for any failure
 uint16_t bstr_lmatch(bstr_t *b, bstr_t *str) {
-  char * c = b->h, * s = str->h;
+  if (!b || !b->h || !str || !str->nt)
+    return -1;
+
+  char * c = b->h;
+  char * s = str->h;
 
   while (c <= b->nt) {
     if (*s == *c) {
@@ -552,5 +567,80 @@ uint16_t bstr_lmatch(bstr_t *b, bstr_t *str) {
   }
   return -1;
 }
+
+
+//Returns the index of the first letter of the last occurence of str on success, -1 for any failure
+uint16_t bstr_rmatch(bstr_t *b, bstr_t *str) {
+  if (!b || !b->h || !str || !str->nt)
+    return -1;
+
+  char * c = b->nt;
+  char * s = str->nt;
+
+  while (c <= b->nt) {
+    if (*s == *c) {
+      if (s == str->nt)
+	return (c - b->h) - bstr_strlen(str) + 1;
+      --s;
+    } else
+      s = str->nt;
+    --c;
+  }
+  return -1;
+}
+
+//*** DOES NOT DESTROY b
+//serializes the data in b->h into a new file with the filename provided
+//returns 0 for success, -1 for failure 
+uint16_t bstr_serialize(bstr_t *b, char *filename) {
+  if (!b || !b->h || !filename)
+    return -1;
+
+  int fd = open(filename, O_CREAT|O_TRUNC|O_WRONLY, 0660);
+  if (fd < 0)
+    return -1;
+
+  size_t len = bstr_strlen(b);
+  size_t bytes_written = (size_t)write(fd, &len, sizeof(size_t));
+  if (bytes_written < sizeof(size_t)) {
+    close(fd);
+    return -1;
+  }
+
+  bytes_written = (size_t)write(fd, b->h, len);
+  close(fd);
+  if (bytes_written < len)
+    return -1;
+  return 0;
+}
+
+
+//deserializes the data in file with filename provided into the b->h of a new bstr_t *b
+//returns b for success, NULL for failure 
+bstr_t *bstr_deserialize(char *filename) {
+  if (!filename)
+    return NULL;
+
+  int fd = open(filename, O_RDONLY);
+  if (fd < 0)
+    return NULL;
+
+  size_t len = 0;
+  int bytes_read = read(fd, &len, sizeof(size_t));
+  if (bytes_read < sizeof(size_t)) {
+    close(fd);
+    return NULL;
+  }
+
+  bstr_t *b = bstr_create(len);
+  bytes_read = read(fd, b->h, len);
+  close(fd);
+  if (bytes_read < len) {
+    bstr_destroy(b);
+    return NULL;
+  }  
+  return b;
+}
+
 
 #endif

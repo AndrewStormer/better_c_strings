@@ -35,13 +35,13 @@ file_parse(FILE *fp, ...) {
 ## TODO:
 More comments!
 
+-----Serializing methods (writing to files)-----
+
 -----Refector bstr_xclean algorithms.-----
 
 Split function that make check several delimitters
 
 String comparison algorithms.
-
-Build Directory.
 
 Potentially return string statically in bstr_unwrap, or take an already pre-allocated (statically or dynamically) char * as a second parameter to unwrap into, making unwrap void.
 
