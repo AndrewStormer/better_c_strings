@@ -33,6 +33,10 @@ file_parse(FILE *fp, ...) {
 ```
 
 ## TODO:
+Strcmp
+
+sorting function?!?!? maybe hard to make safe
+
 More comments!
 
 -----Serializing methods (writing to files)-----

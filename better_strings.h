@@ -1,7 +1,6 @@
 #ifndef BETTER_STRINGS_H_
 #define BETTER_STRINGS_H_
 
-#include <stdio.h>
 #include <stdlib.h>
 #include <sys/types.h>
 #include <unistd.h>
@@ -190,10 +189,9 @@ bstr_t *bstr_wrap(char * s) {
     return NULL;
 
   size_t len = str_strlen(s)-1;
-  if (len == 0) {
-    printf("ERROR: Cannot wrap empty string.\n");
+  if (len == 0)
     return NULL;
-  }
+
   bstr_t *b = bstr_create(len);
   if (!b)
     return NULL;
