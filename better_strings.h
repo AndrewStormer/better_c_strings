@@ -8,14 +8,14 @@
 
 
 typedef struct bstr {
-  char * h, * nt; //head and null terminator (not actually saving space for '\0', we know we are at the end if a pointer points to bstr.nt.
+  char *h, *nt; //head and null terminator (not actually saving space for '\0', we know we are at the end if a pointer points to bstr.nt.
 } bstr_t;
 
 //Create/Destroy functions
-bstr_t *bstr_wrap(char * s);
+bstr_t *bstr_wrap(char *s);
 char *bstr_unwrap(bstr_t *b);
 uint16_t bstr_destroy(bstr_t *b);
-uint16_t bstr_destroy_tokens(bstr_t ** tokens, uint16_t token_count);
+uint16_t bstr_destroy_tokens(bstr_t **tokens, uint16_t token_count);
 
 //Printing functions
 void bstr_print(bstr_t *b);
@@ -27,7 +27,7 @@ uint16_t bstr_count_char(bstr_t *b, char c);
 
 //String Algorithms
 bstr_t *bstr_substr(bstr_t *b, uint32_t start, size_t len);
-uint16_t bstr_append_str(bstr_t *b, char * s);
+uint16_t bstr_append_str(bstr_t *b, char *s);
 uint16_t bstr_append(bstr_t *b, bstr_t *s);
 bstr_t **bstr_split(bstr_t *b, char delim, uint16_t *token_count, uint8_t keep_delim);
 bstr_t *bstr_join(bstr_t **b, uint16_t token_count);
@@ -57,8 +57,8 @@ bstr_t *bstr_deserialize(char *filename);
 //NOTE: These are internal functions to be used by bstr interface functions
 
 //Returns the length of a null terminated array of characters
-static size_t str_strlen(char * s) {
-  char * c = s;
+static size_t str_strlen(char *s) {
+  char *c = s;
   while (*c != '\0') {
     ++c;
   }
@@ -68,7 +68,7 @@ static size_t str_strlen(char * s) {
 
 //creates an empty bstr_t. returns NULL for any errors.
 static bstr_t *bstr_create(size_t len) {
-  bstr_t * b = malloc(sizeof(bstr_t));
+  bstr_t *b = malloc(sizeof(bstr_t));
   if (!b)
       return NULL;
 
@@ -88,7 +88,7 @@ static uint16_t bstr_count_tokens(bstr_t *b, char delim) {
   if (!b)
     return -1;
 
-  char * c = b->h;
+  char *c = b->h;
   uint16_t count = 0;
   if (*c == delim)
     ++count;
@@ -104,7 +104,7 @@ static uint16_t bstr_count_tokens(bstr_t *b, char delim) {
 
 //Finds the next delimitter in b where h is a character pointer into the b->h
 //Returns the pointer to the position of the next delimitter (or the nt), or NULL if any errors occur
-static char * bstr_next_delim(bstr_t *b, char * h, char delim) {
+static char *bstr_next_delim(bstr_t *b, char *h, char delim) {
   if (!b || !h)
     return NULL;
 
@@ -117,7 +117,7 @@ static char * bstr_next_delim(bstr_t *b, char * h, char delim) {
 
 //Finds the next non delimitter where h is a character pointer into b->h
 //Returns the pointer to the position of the next non delimitter character (or the nt),  or NULL if any errors occur
-static char * bstr_next_non_delim(bstr_t *b, char * h, char delim) {
+static char *bstr_next_non_delim(bstr_t *b, char *h, char delim) {
   if (!b || !h)
     return NULL;
 
@@ -169,8 +169,8 @@ static bstr_t *bstr_substr_s(char *s, char *e) {
   size_t len = (e-s)+1;
   bstr_t *b = bstr_create(len);
 
-  char * ptr = b->h;
-  for (char * i = s; i <= e; ++i) {
+  char *ptr = b->h;
+  for (char *i = s; i <= e; ++i) {
     *ptr = *i;
     ++ptr;
   }
@@ -180,11 +180,11 @@ static bstr_t *bstr_substr_s(char *s, char *e) {
 
 //bstr_t interface functions:
 
-//*** USER ALWAYS RESPONSIBLE FOR FREEING BSTR MEMORY USING GIVEN DESTROY FUNCTIONS IF NOT UNWRAPPED
-//*** THIS MEANS SERIALIZE, JOIN, ETC. DO NOT DESTROY THE GIVEN BSTR
+//***USER ALWAYS RESPONSIBLE FOR FREEING BSTR MEMORY USING GIVEN DESTROY FUNCTIONS
+//***THIS MEANS SERIALIZE, JOIN, ETC. DO NOT DESTROY THE GIVEN BSTR
 //Wraps a null-terminated string s into a new bstr_t struct pointer
 //Returns the new bstr_t pointer, or NULL on error
-bstr_t *bstr_wrap(char * s) {
+bstr_t *bstr_wrap(char *s) {
   if (!s) 
     return NULL;
 
@@ -205,7 +205,8 @@ bstr_t *bstr_wrap(char * s) {
 
 //TODO: implement a way to declare in static space so we do not have to free
 //Problem: doing char str[bstr_strlen(b)+1] creates str in the stack, which does not persist after the function is returned from, and so we try to return a pointer to that stack space which changes when stack is used next.
-//*** MUST FREE STRING PASSED BACK FROM FUNCTION
+//***MUST FREE STRING PASSED BACK FROM FUNCTION
+//***DOES NOT DESTORY b
 //Unwraps a bstr_t struct pointer into a null-terminated dynamic string
 //Returns the unwrapped string, or NULL on error
 char *bstr_unwrap(bstr_t *b) {
@@ -224,7 +225,6 @@ char *bstr_unwrap(bstr_t *b) {
     ++c;
   }
   *s = '\0';
-  bstr_destroy(b);
   return &str[0];
 }
 
@@ -258,7 +258,7 @@ inline uint16_t bstr_destroy_tokens(bstr_t **tokens, uint16_t token_count) {
 //Prints a bstr_r pointer
 void bstr_print(bstr_t *b) {
   if (b) {
-    char * c = b->h;
+    char *c = b->h;
     while (c != b->nt + 1) {
       printf("%c", *c);
       ++c;
@@ -292,7 +292,7 @@ uint16_t bstr_count_char(bstr_t *b, char c) {
     return -1;
   
   uint16_t count = 0;
-  for (char * p = b->h; p <= b->nt; ++p) {
+  for (char *p = b->h; p <= b->nt; ++p) {
     if (*p == c)
       ++count;
   }
@@ -311,7 +311,7 @@ bstr_t *bstr_substr(bstr_t *b, uint32_t start, size_t len) {
     return NULL;
   
   char *h = s->h;
-  char* c = b->h + start;
+  char*c = b->h + start;
   for (; c < b->h + (start + len) && c < b->nt; ++c) {
     *h = *c;
     ++h;
@@ -346,7 +346,7 @@ uint16_t bstr_append_str(bstr_t *b, char *s) {
 }
 
 
-//*** DOES NOT DESTROY s
+//***DOES NOT DESTROY s
 //Appends a bstr_t s to the end of another bstr_t b
 //Returns 0 on success, -1 for any failure
 uint16_t bstr_append(bstr_t *b, bstr_t *s) {
@@ -364,7 +364,7 @@ uint16_t bstr_append(bstr_t *b, bstr_t *s) {
 
   b->nt = b->h + new_len-1;
 
-  char * c1 = (b->h + (len)), * c2 = s->h;
+  char *c1 = (b->h + (len)), *c2 = s->h;
   while (c1 <= b->nt) {
     *c1 = *c2;
     ++c1;
@@ -374,7 +374,7 @@ uint16_t bstr_append(bstr_t *b, bstr_t *s) {
 }
 
 
-//*** DOES NOT DESTROY b
+//***DOES NOT DESTROY b
 //Splits the bstr_t into tokens given the delim
 //parameter token_count passed by reference; to be changed by the function
 //parameter keep_delim is 0 if tokens should not contain the delimitter provided, 1 if they should
@@ -394,8 +394,8 @@ bstr_t **bstr_split(bstr_t *b, char delim, uint16_t *token_count, uint8_t keep_d
   if (!tokens)
       return NULL;
 
-  char * c = b->h;
-  char * d;
+  char *c = b->h;
+  char *d;
   for (size_t i = 0; i < *token_count; ++i) {
     d = bstr_next_delim(b, c, delim);
     if (kd == 1 && d != b->nt) {
@@ -409,7 +409,7 @@ bstr_t **bstr_split(bstr_t *b, char delim, uint16_t *token_count, uint8_t keep_d
 }
 
 
-//*** DOES NOT DESTROY tokens
+//***DOES NOT DESTROY tokens
 //Joins token_count tokens into 1 long bstr_t
 //returns the joined bstr_t, or NULL on faliure
 bstr_t *bstr_join(bstr_t **tokens, uint16_t token_count) {
@@ -423,9 +423,9 @@ bstr_t *bstr_join(bstr_t **tokens, uint16_t token_count) {
   if (!b)
     return NULL;
 
-  char * h = b->h;
+  char *h = b->h;
   for (size_t i = 0; i < token_count; ++i) {
-    char * c = tokens[i]->h;
+    char *c = tokens[i]->h;
     while (c != tokens[i]->nt + 1) {
       *h = *c;
       ++c;
@@ -443,7 +443,7 @@ bstr_t *bstr_join(bstr_t **tokens, uint16_t token_count) {
 uint16_t bstr_reverse(bstr_t *b) {
   if (!b) 
     return -1;
-  char * s = b->h, * e = b->nt;
+  char *s = b->h, *e = b->nt;
 
   while (e > s) {
     char temp = *s;
@@ -458,7 +458,7 @@ uint16_t bstr_reverse(bstr_t *b) {
 
 //Reverses token_count bstr_t's
 //Returns 0 on success, -1 for any failure
-uint16_t bstr_reverse_tokens(bstr_t ** tokens, uint16_t token_count) {
+uint16_t bstr_reverse_tokens(bstr_t **tokens, uint16_t token_count) {
   if (!tokens || token_count < 1)
     return -1;
   for (size_t i = 0; i < token_count; ++i) {
@@ -475,8 +475,8 @@ uint16_t bstr_lmatch(bstr_t *b, bstr_t *str) {
   if (!b || !b->h || !str || !str->nt)
     return -2;
 
-  char * c = b->h;
-  char * s = str->h;
+  char *c = b->h;
+  char *s = str->h;
 
   while (c <= b->nt) {
     if (*s == *c) {
@@ -497,8 +497,8 @@ uint16_t bstr_rmatch(bstr_t *b, bstr_t *str) {
   if (!b || !b->h || !str || !str->nt)
     return -2;
 
-  char * c = b->nt;
-  char * s = str->nt;
+  char *c = b->nt;
+  char *s = str->nt;
 
   while (c <= b->nt) {
     if (*s == *c) {
@@ -634,7 +634,7 @@ uint16_t bstr_clean_tokens(bstr_t **tokens, uint16_t token_count) {
 
 //Deletes all of the whitespace in the string
 //Returns 0 on success, -1 for any failure
-uint16_t bstr_full_clean(bstr_t * b) {
+uint16_t bstr_full_clean(bstr_t *b) {
   if (!b)
     return -1;
 
@@ -649,7 +649,7 @@ uint16_t bstr_full_clean(bstr_t * b) {
 }
 
 
-//*** DOES NOT DESTROY b
+//***DOES NOT DESTROY b
 //serializes the data in b->h into a new file with the filename provided
 //returns 0 for success, -1 for failure 
 uint16_t bstr_serialize(bstr_t *b, char *filename) {
