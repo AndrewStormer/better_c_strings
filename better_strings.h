@@ -14,39 +14,39 @@ typedef struct bstr {
 //Create/Destroy functions
 bstr_t *bstr_wrap(char *s);
 char *bstr_unwrap(bstr_t *b);
-uint16_t bstr_destroy(bstr_t *b);
-uint16_t bstr_destroy_tokens(bstr_t **tokens, uint16_t token_count);
+uint32_t bstr_destroy(bstr_t *b);
+uint32_t bstr_destroy_tokens(bstr_t **tokens, uint32_t token_count);
 
 //Printing functions
 void bstr_print(bstr_t *b);
-void bstr_print_tokens(bstr_t **tokens, uint16_t token_count);
+void bstr_print_tokens(bstr_t **tokens, uint32_t token_count);
 
 //String utility
 size_t bstr_strlen(bstr_t *b);
-uint16_t bstr_count_char(bstr_t *b, char c);
+uint32_t bstr_count_char(bstr_t *b, char c);
 
 //String Algorithms
 bstr_t *bstr_substr(bstr_t *b, uint32_t start, size_t len);
-uint16_t bstr_append_str(bstr_t *b, char *s);
-uint16_t bstr_append(bstr_t *b, bstr_t *s);
-bstr_t **bstr_split(bstr_t *b, char delim, uint16_t *token_count, uint8_t keep_delim);
-bstr_t *bstr_join(bstr_t **b, uint16_t token_count);
-uint16_t bstr_reverse(bstr_t *b);
-uint16_t bstr_reverse_tokens(bstr_t **tokens, uint16_t token_count);
-uint16_t bstr_lmatch(bstr_t *b, bstr_t *str);
-uint16_t bstr_rmatch(bstr_t *b, bstr_t *str);
+uint32_t bstr_append_str(bstr_t *b, char *s);
+uint32_t bstr_append(bstr_t *b, bstr_t *s);
+bstr_t **bstr_split(bstr_t *b, char delim, uint32_t *token_count, uint8_t keep_delim);
+bstr_t *bstr_join(bstr_t **b, uint32_t token_count);
+uint32_t bstr_reverse(bstr_t *b);
+uint32_t bstr_reverse_tokens(bstr_t **tokens, uint32_t token_count);
+uint32_t bstr_lmatch(bstr_t *b, bstr_t *str);
+uint32_t bstr_rmatch(bstr_t *b, bstr_t *str);
 
 //Cleaning Algorithms
-uint16_t bstr_lclean(bstr_t **b);
-uint16_t bstr_lclean_tokens(bstr_t **tokens, uint16_t token_count);
-uint16_t bstr_rclean(bstr_t **b);
-uint16_t bstr_rclean_tokens(bstr_t **tokens, uint16_t token_count);
-uint16_t bstr_clean(bstr_t **b);
-uint16_t bstr_clean_tokens(bstr_t **tokens, uint16_t token_count);
-uint16_t bstr_full_clean(bstr_t *b);
+uint32_t bstr_lclean(bstr_t **b);
+uint32_t bstr_lclean_tokens(bstr_t **tokens, uint32_t token_count);
+uint32_t bstr_rclean(bstr_t **b);
+uint32_t bstr_rclean_tokens(bstr_t **tokens, uint32_t token_count);
+uint32_t bstr_clean(bstr_t **b);
+uint32_t bstr_clean_tokens(bstr_t **tokens, uint32_t token_count);
+uint32_t bstr_full_clean(bstr_t *b);
 
 //Serialize/Deserialize functions
-uint16_t bstr_serialize(bstr_t *b, char *filename);
+uint32_t bstr_serialize(bstr_t *b, char *filename);
 bstr_t *bstr_deserialize(char *filename);
 
 
@@ -84,12 +84,12 @@ static bstr_t *bstr_create(size_t len) {
 
 
 //counts the number of tokens given a delimitter. returns -1 for any error
-static uint16_t bstr_count_tokens(bstr_t *b, char delim) {
+static uint32_t bstr_count_tokens(bstr_t *b, char delim) {
   if (!b)
     return -1;
 
   char *c = b->h;
-  uint16_t count = 0;
+  uint32_t count = 0;
   if (*c == delim)
     ++count;
   ++c;
@@ -231,7 +231,7 @@ char *bstr_unwrap(bstr_t *b) {
 
 //Destroys a bstr_t struct pointer
 //Returns 0 on success, -1 for any failure
-uint16_t bstr_destroy(bstr_t *b) {
+uint32_t bstr_destroy(bstr_t *b) {
   if (!b)
     return -1;
   if (!b->h) {
@@ -246,7 +246,7 @@ uint16_t bstr_destroy(bstr_t *b) {
 
 //Destroys the array of bstr_t struct pointers
 //Returns 0 on success, -1 for any failure
-inline uint16_t bstr_destroy_tokens(bstr_t **tokens, uint16_t token_count) {
+inline uint32_t bstr_destroy_tokens(bstr_t **tokens, uint32_t token_count) {
   for (size_t i = 0; i < token_count; ++i) {
     if (bstr_destroy(tokens[i]) < 0)
       return -1;
@@ -269,7 +269,7 @@ void bstr_print(bstr_t *b) {
 
 
 //Prints an array of bstr_t pointers
-void bstr_print_tokens(bstr_t **tokens, uint16_t token_count) {
+void bstr_print_tokens(bstr_t **tokens, uint32_t token_count) {
   if (tokens && token_count > 0) {
     for (size_t i = 0; i < token_count; i++) {
       bstr_print(tokens[i]);
@@ -287,11 +287,11 @@ inline size_t bstr_strlen(bstr_t *b) {
 
 //Counts the instances of a specific character in the string
 //Returns the count on success, -1 for any failure
-uint16_t bstr_count_char(bstr_t *b, char c) {
+uint32_t bstr_count_char(bstr_t *b, char c) {
   if (!b)
     return -1;
   
-  uint16_t count = 0;
+  uint32_t count = 0;
   for (char *p = b->h; p <= b->nt; ++p) {
     if (*p == c)
       ++count;
@@ -322,7 +322,7 @@ bstr_t *bstr_substr(bstr_t *b, uint32_t start, size_t len) {
 
 //Appends a null terminated string onto the end of b
 //Returns 0 on success, -1 for any failure
-uint16_t bstr_append_str(bstr_t *b, char *s) {
+uint32_t bstr_append_str(bstr_t *b, char *s) {
   if (!b || !s)
     return -1;
 
@@ -349,7 +349,7 @@ uint16_t bstr_append_str(bstr_t *b, char *s) {
 //***DOES NOT DESTROY s
 //Appends a bstr_t s to the end of another bstr_t b
 //Returns 0 on success, -1 for any failure
-uint16_t bstr_append(bstr_t *b, bstr_t *s) {
+uint32_t bstr_append(bstr_t *b, bstr_t *s) {
   if (!b || !s)
     return -1;
   size_t len = bstr_strlen(b);
@@ -379,7 +379,7 @@ uint16_t bstr_append(bstr_t *b, bstr_t *s) {
 //parameter token_count passed by reference; to be changed by the function
 //parameter keep_delim is 0 if tokens should not contain the delimitter provided, 1 if they should
 //Returns token_count amount of tokens, split from the bstr_t *b given by delim
-bstr_t **bstr_split(bstr_t *b, char delim, uint16_t *token_count, uint8_t keep_delim) {
+bstr_t **bstr_split(bstr_t *b, char delim, uint32_t *token_count, uint8_t keep_delim) {
   if (!b || !token_count)
     return NULL;
   
@@ -412,10 +412,10 @@ bstr_t **bstr_split(bstr_t *b, char delim, uint16_t *token_count, uint8_t keep_d
 //***DOES NOT DESTROY tokens
 //Joins token_count tokens into 1 long bstr_t
 //returns the joined bstr_t, or NULL on faliure
-bstr_t *bstr_join(bstr_t **tokens, uint16_t token_count) {
+bstr_t *bstr_join(bstr_t **tokens, uint32_t token_count) {
   if (!tokens || token_count == 0)
     return NULL;
-  uint16_t joined_len = 0;
+  uint32_t joined_len = 0;
   for (size_t i = 0; i < token_count; ++i)
     joined_len += bstr_strlen(tokens[i]);
   
@@ -440,7 +440,7 @@ bstr_t *bstr_join(bstr_t **tokens, uint16_t token_count) {
 
 //Reverses the given bstr_t in place
 //Returns 0 on success, -1 for any failure
-uint16_t bstr_reverse(bstr_t *b) {
+uint32_t bstr_reverse(bstr_t *b) {
   if (!b) 
     return -1;
   char *s = b->h, *e = b->nt;
@@ -458,7 +458,7 @@ uint16_t bstr_reverse(bstr_t *b) {
 
 //Reverses token_count bstr_t's
 //Returns 0 on success, -1 for any failure
-uint16_t bstr_reverse_tokens(bstr_t **tokens, uint16_t token_count) {
+uint32_t bstr_reverse_tokens(bstr_t **tokens, uint32_t token_count) {
   if (!tokens || token_count < 1)
     return -1;
   for (size_t i = 0; i < token_count; ++i) {
@@ -471,7 +471,7 @@ uint16_t bstr_reverse_tokens(bstr_t **tokens, uint16_t token_count) {
 
 //Returns the index of the first letter of the first occurence of str on success
 //Or -2 for invalid parameters, or -1 for str not in b
-uint16_t bstr_lmatch(bstr_t *b, bstr_t *str) {
+uint32_t bstr_lmatch(bstr_t *b, bstr_t *str) {
   if (!b || !b->h || !str || !str->nt)
     return -2;
 
@@ -493,7 +493,7 @@ uint16_t bstr_lmatch(bstr_t *b, bstr_t *str) {
 
 //Returns the index of the first letter of the last occurence of str on success
 //Returns -2 for invalid parameters, or -1 for str not in b
-uint16_t bstr_rmatch(bstr_t *b, bstr_t *str) {
+uint32_t bstr_rmatch(bstr_t *b, bstr_t *str) {
   if (!b || !b->h || !str || !str->nt)
     return -2;
 
@@ -515,7 +515,7 @@ uint16_t bstr_rmatch(bstr_t *b, bstr_t *str) {
 
 //Deletes all the whitespace on the left of the string
 //Returns 0 on success, -1 for any failure
-uint16_t bstr_lclean(bstr_t **b) {
+uint32_t bstr_lclean(bstr_t **b) {
   if (!*b || !(*b)->h)
     return -1;
 
@@ -539,7 +539,7 @@ uint16_t bstr_lclean(bstr_t **b) {
 
 //Deletes all the whitespace on the left of token_count tokens
 //Returns 0 on success, -1 for any failure
-uint16_t bstr_lclean_tokens(bstr_t **tokens, uint16_t token_count) {
+uint32_t bstr_lclean_tokens(bstr_t **tokens, uint32_t token_count) {
   if (!tokens || token_count <= 0) 
     return -1;
   for (size_t i = 0; i < token_count; ++i) {
@@ -553,7 +553,7 @@ uint16_t bstr_lclean_tokens(bstr_t **tokens, uint16_t token_count) {
 
 //Deletes all the whitespace on the right of the string
 //Returns 0 on success, -1 for any failure
-uint16_t bstr_rclean(bstr_t **b) {
+uint32_t bstr_rclean(bstr_t **b) {
   if (!*b || !(*b)->h)
     return -1;
 
@@ -577,7 +577,7 @@ uint16_t bstr_rclean(bstr_t **b) {
 
 //Deletes all the whitespace on the right of token_count tokens
 //Returns 0 on success, -1 for any failure
-uint16_t bstr_rclean_tokens(bstr_t **tokens, uint16_t token_count) {
+uint32_t bstr_rclean_tokens(bstr_t **tokens, uint32_t token_count) {
   if (!tokens || token_count <= 0) 
     return -1;
   for (size_t i = 0; i < token_count; ++i) {
@@ -591,7 +591,7 @@ uint16_t bstr_rclean_tokens(bstr_t **tokens, uint16_t token_count) {
 
 //Deletes all the whitespace on both sides of the string
 //Returns 0 on success, -1 for any failure
-uint16_t bstr_clean(bstr_t **b) {
+uint32_t bstr_clean(bstr_t **b) {
   if (!b && !*b)
     return -1;
 
@@ -619,7 +619,7 @@ uint16_t bstr_clean(bstr_t **b) {
 
 //Deletes all the whitespace on both sides of token_count tokens
 //Returns 0 on success, -1 for any failure
-uint16_t bstr_clean_tokens(bstr_t **tokens, uint16_t token_count) {
+uint32_t bstr_clean_tokens(bstr_t **tokens, uint32_t token_count) {
   if (!tokens || token_count < 1)
     return -1;
 
@@ -634,11 +634,11 @@ uint16_t bstr_clean_tokens(bstr_t **tokens, uint16_t token_count) {
 
 //Deletes all of the whitespace in the string
 //Returns 0 on success, -1 for any failure
-uint16_t bstr_full_clean(bstr_t *b) {
+uint32_t bstr_full_clean(bstr_t *b) {
   if (!b)
     return -1;
 
-  uint16_t token_count = 0;
+  uint32_t token_count = 0;
   bstr_t **tokens = bstr_split(b,  ' ', &token_count, 0);
   bstr_destroy(b);
   bstr_clean_tokens(tokens, token_count);
@@ -652,7 +652,7 @@ uint16_t bstr_full_clean(bstr_t *b) {
 //***DOES NOT DESTROY b
 //serializes the data in b->h into a new file with the filename provided
 //returns 0 for success, -1 for failure 
-uint16_t bstr_serialize(bstr_t *b, char *filename) {
+uint32_t bstr_serialize(bstr_t *b, char *filename) {
   if (!b || !b->h || !filename)
     return -1;
 
